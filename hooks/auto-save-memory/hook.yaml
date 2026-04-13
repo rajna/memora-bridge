@@ -1,0 +1,5 @@
+name: memory-bridge-auto-save
+description: 自动保存重要对话到 Memora
+trigger:
+  event: on_response
+  priority: 50
