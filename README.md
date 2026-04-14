@@ -1,5 +1,7 @@
 # Memora Bridge
-
+<p align="center">
+  <img src="logo.png" width="200" alt="Memora Logo">
+</p>
 连接 nanobot 与 Memora 记忆系统的桥梁，实现对话自动记录与检索。
 
 ## 功能特性
