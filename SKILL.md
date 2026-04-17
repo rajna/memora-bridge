@@ -1,7 +1,6 @@
 ---
 name: memora-bridge
 description: 连接 nanobot 与 Memora 的桥梁，实现对话自动记录。
-always: true
 ---
 
 
