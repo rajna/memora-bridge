@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Memora Bridge - Auto Save Hook (v8 - 使用 MemorySystem.add_memory_from_messages)
+Memora Bridge - Auto Save Hook (v9.1 - 内部异步质检)
 
-## 改进 (v8)
+## 改进 (v9.1)
+1. **内部异步**: add_memory_from_messages 内部异步执行 LLM 质检
+2. **立即返回**: 保存记忆后立即返回，质检在后台完成
+3. **分离存储**: 质检结果保存到 memora/skill/*.md，不写入记忆节点内容
+
+## 之前改进 (v9)
+1. **异步保存**: 使用线程池异步执行 add_memory_from_messages，LLM 质检不阻塞对话
+2. **后台质检**: skill 质量检测在后台进行，不影响用户体验
+
+## 之前改进 (v8)
 1. **职责分离**: skill 检测、格式化等逻辑移到 MemorySystem
 2. **简化代码**: 直接调用 ms.add_memory_from_messages()
-
-## 之前改进 (v7)
-1. 清理未使用代码，简化核心流程
 
 ## 触发条件
 - 对话内容长度 > 10 字符
@@ -15,8 +21,9 @@ Memora Bridge - Auto Save Hook (v8 - 使用 MemorySystem.add_memory_from_message
 
 ## 流程
 1. 从 messages 提取当前轮次对话
-2. 调用 ms.add_memory_from_messages() 统一处理
-3. 自动完成：skill 检测、格式化、标签生成、向量嵌入
+2. 调用 ms.add_memory_from_messages(async_judge=True)
+3. 同步完成：skill 检测、格式化、标签生成、向量嵌入、保存记忆
+4. 后台异步：LLM 质检，结果写入 memora/skill/*.md
 """
 import sys
 import re
@@ -26,20 +33,6 @@ from typing import List, Dict, Any
 # Memora 路径
 MEMORA_PATH = Path("/Users/rama/.nanobot/workspace/Memora")
 sys.path.insert(0, str(MEMORA_PATH))
-
-# 简单关键词判断 - 什么内容值得保存
-IMPORTANT_KEYWORDS = [
-    # 项目相关
-    "项目", "project", "架构", "architecture", "设计", "design",
-    # 技术决策
-    "方案", "solution", "决定", "decision", "选型", "技术",
-    # 重要信息
-    "重要", "important", "记住", "remember", "备忘", "todo",
-    # 问题与解决
-    "问题", "issue", "bug", "解决", "fixed", "搞定", "完成",
-    # 学习与总结
-    "学习", "总结", "笔记", "note", "知识点",
-]
 
 def _is_worth_saving(content: str) -> bool:
     """
@@ -138,11 +131,14 @@ async def execute(context):
         
         ms = Memora()
         
-        # 使用统一方法处理
+        # 同步保存记忆，但异步执行 LLM 质检（不阻塞）
+        # async_judge=True 会让质检在后台执行
         node = ms.add_memory_from_messages(
             messages=current_round,
             source="auto-save",
-            base_tags=["auto-saved"]
+            base_tags=["auto-saved"],
+            judge_quality=True,      # 启用质检
+            async_judge=True         # 异步执行，不阻塞保存
         )
         
         if node:
